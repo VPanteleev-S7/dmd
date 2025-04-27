@@ -43,6 +43,7 @@ import dmd.id;
 import dmd.identifier;
 import dmd.location;
 import dmd.parse;
+import dmd.root.aav;
 import dmd.root.array;
 import dmd.root.file;
 import dmd.root.filename;
@@ -322,6 +323,10 @@ extern (C++) final class Module : Package
     extern (C++) __gshared Dsymbols deferred;    // deferred Dsymbol's needing semantic() run on them
     extern (C++) __gshared Dsymbols deferred2;   // deferred Dsymbol's needing semantic2() run on them
     extern (C++) __gshared Dsymbols deferred3;   // deferred Dsymbol's needing semantic3() run on them
+
+    private __gshared AssocArray!(Dsymbol, Dsymbol) deferredSeen;
+    private __gshared AssocArray!(Dsymbol, Dsymbol) deferred2Seen;
+    private __gshared AssocArray!(Dsymbol, Dsymbol) deferred3Seen;
 
     static void _init()
     {
@@ -1008,22 +1013,34 @@ extern (C++) final class Module : Package
     extern (D) static void addDeferredSemantic(Dsymbol s)
     {
         //printf("Module::addDeferredSemantic('%s')\n", s.toChars());
-        if (!deferred.contains(s))
+        auto seen = deferredSeen.getLvalue(s);
+        if (*seen is null)
+        {
+            *seen = s;
             deferred.push(s);
+        }
     }
 
     extern (D) static void addDeferredSemantic2(Dsymbol s)
     {
         //printf("Module::addDeferredSemantic2('%s')\n", s.toChars());
-        if (!deferred2.contains(s))
+        auto seen = deferred2Seen.getLvalue(s);
+        if (*seen is null)
+        {
+            *seen = s;
             deferred2.push(s);
+        }
     }
 
     extern (D) static void addDeferredSemantic3(Dsymbol s)
     {
         //printf("Module::addDeferredSemantic3('%s')\n", s.toChars());
-        if (!deferred3.contains(s))
+        auto seen = deferred3Seen.getLvalue(s);
+        if (*seen is null)
+        {
+            *seen = s;
             deferred3.push(s);
+        }
     }
 
     /******************************************
@@ -1058,6 +1075,7 @@ extern (C++) final class Module : Package
             }
             memcpy(todo, deferred.tdata(), len * Dsymbol.sizeof);
             deferred.setDim(0);
+            deferredSeen = typeof(deferredSeen).init;
 
             foreach (i; 0..len)
             {
@@ -1089,6 +1107,7 @@ extern (C++) final class Module : Package
                 break;
         }
         a.setDim(0);
+        deferred2Seen = typeof(deferred2Seen).init;
     }
 
     static void runDeferredSemantic3()
@@ -1106,6 +1125,7 @@ extern (C++) final class Module : Package
                 break;
         }
         a.setDim(0);
+        deferred3Seen = typeof(deferred3Seen).init;
     }
 
     extern (D) static void clearCache() nothrow
